@@ -18,7 +18,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 public class EngineringMod {
 
     public static final String MODID = "engineering";
-    public TubeManager manager = new TubeManager();
+    public TubeManager manager;
 
     @Mod.Instance(MODID)
     public static EngineringMod instance;
@@ -27,6 +27,8 @@ public class EngineringMod {
     public void preInit(FMLPreInitializationEvent event){
         EngineeringBlocks.preInitBlocks();
         EngineeringBlocks.registerBlocks();
+
+        manager = (TubeManager) EventSchedulerMod.registerAndInstanciateManager( MODID + "_tube_manager", TubeManager.class );
     }
 
     @Mod.EventHandler

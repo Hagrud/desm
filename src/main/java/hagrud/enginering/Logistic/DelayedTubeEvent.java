@@ -49,6 +49,8 @@ public class DelayedTubeEvent extends DelayedEvent {
         world = DimensionManager.getWorld( nbt.getInteger( "w" ) );
     }
 
+    public void postLoad(){}
+
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
         nbt.setInteger( "x", startX );

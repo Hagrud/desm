@@ -1,14 +1,18 @@
 package hagrud.enginering.Logistic;
 
 import hagrud.devent.EventSchedulerMod;
+import hagrud.devent.IStorable;
 import javafx.util.Pair;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class TubeManager {
+public class TubeManager implements IStorable {
 
     // Key : X,Z position, Value : Pos, Length
     private Map<Pair<Integer, Integer>, Map<Integer, Integer>> pipes;
@@ -130,4 +134,91 @@ public class TubeManager {
         return false;
     }
 
+    @Override
+    public void readFromNBT(NBTTagCompound nbt) {
+        pipes.clear();
+        System.out.println( "Start read nbt" );
+
+        if ( nbt == null )
+            return;
+
+        int n = nbt.getInteger( "n" );
+        int[] xs = nbt.getIntArray( "x");
+        int[] ys = nbt.getIntArray( "y");
+        int[] zs = nbt.getIntArray( "z");
+        int[] ls = nbt.getIntArray( "l");
+
+        for( int i = 0; i < n; i++)
+        {
+            addFullTube( xs[i], ys[i], zs[i], ls[i] );
+        }
+
+        System.out.println("NBT tag : " + nbt);
+        System.out.println("End read nbt : " + pipes);
+    }
+
+    private void addFullTube( int x, int y, int z, int l ){
+        Pair<Integer,Integer> xz = new Pair<>( x, z );
+
+        Map< Integer, Integer > localPipe;
+        if ( pipes.containsKey( xz ) )
+        {
+            localPipe = pipes.get( xz );
+        } else
+        {
+            localPipe = new HashMap<>();
+            pipes.put( xz, localPipe );
+        }
+
+        localPipe.put( y, l ); // TODO check if no conflict ?!
+    }
+
+    @Override
+    public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
+        List< Integer[] > fulls = new ArrayList<>();
+
+        int n = 0;
+        for( Pair<Integer,Integer> xz : pipes.keySet() )
+        {
+            for ( Integer y : pipes.get(xz).keySet() )
+            {
+                Integer[] vals = new Integer[4];
+                vals[0] = xz.getKey();
+                vals[1] = y;
+                vals[2] = xz.getValue();
+                vals[3] = pipes.get(xz).get(y);
+                fulls.add( vals );
+                n++;
+            }
+        }
+
+        int[] xs = new int[n];
+        int[] ys = new int[n];
+        int[] zs = new int[n];
+        int[] ls = new int[n];
+
+        int i = 0;
+        for( Integer[] vals : fulls )
+        {
+            xs[i] = vals[0];
+            ys[i] = vals[1];
+            zs[i] = vals[2];
+            ls[i] = vals[3];
+            i++;
+        }
+
+        nbt.setInteger( "n", n );
+        nbt.setIntArray( "x", xs);
+        nbt.setIntArray( "y", ys);
+        nbt.setIntArray( "z", zs);
+        nbt.setIntArray( "l", ls);
+
+        System.out.println( "nbt : " + nbt );
+        System.out.println( "End write nbt : " + pipes );
+
+        return nbt;
+    }
+
+    @Override
+    public void postLoad() {}
 }

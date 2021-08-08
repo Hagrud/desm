@@ -28,6 +28,9 @@ public class CyclicTickEvent extends DelayedEvent{
     }
 
     @Override
+    public void postLoad() {}
+
+    @Override
     public NBTTagCompound writeToNBT( NBTTagCompound nbt )
     {
         nbt.setLong( "t", delta );

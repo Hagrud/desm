@@ -23,7 +23,9 @@ public class EventSchedulerMod {
     public static EventSchedulerMod instance;
 
         // Registry
-    private final Map<String, Class<? extends DelayedEvent>> registry = new HashMap<>();
+    private final Map<String, Class<? extends DelayedEvent>> eventRegistry = new HashMap<>();
+    private final Map<String, Class<? extends IStorable>> managerRegistry = new HashMap<>();
+    private final Map<String, IStorable> managerList = new HashMap<>();
 
         // Events
     private SortedMap< Long, List<DelayedEvent> > events = new TreeMap<>();
@@ -32,7 +34,20 @@ public class EventSchedulerMod {
 
     public static void registerDelayedEventClass( String key, Class<? extends DelayedEvent> type ){
         // TODO add duplicate check
-        instance.registry.put( key, type );
+        instance.eventRegistry.put( key, type );
+    }
+
+    public static IStorable registerAndInstanciateManager( String key, Class<? extends IStorable> type ){
+        // TODO add duplicate check
+        instance.managerRegistry.put( key, type );
+        try {
+            IStorable inst = type.newInstance();
+            instance.managerList.put( key, inst );
+            return inst;
+        } catch (InstantiationException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public long getTick() { return tick; }
@@ -92,6 +107,33 @@ public class EventSchedulerMod {
 
     @Mod.EventHandler
     public void serverLoad(FMLServerStartingEvent event) {
+        loadEvents();
+        loadManagers();
+    }
+
+    @Mod.EventHandler
+    public void serverUnload(FMLServerStoppingEvent event) {
+        unloadEvents();
+        unloadManagers();
+    }
+
+    @Mod.EventHandler
+    public void serverLoadFinish(FMLServerStartedEvent event) {
+        for( Long key : events.keySet() )
+        {
+            for( DelayedEvent ev : events.get( key ) )
+            {
+                ev.postLoad();
+            }
+        }
+
+        for( IStorable manager : managerList.values())
+        {
+            manager.postLoad();
+        }
+    }
+
+    public void loadEvents(){
         events = new TreeMap<>();
         tick = 0;
 
@@ -118,8 +160,7 @@ public class EventSchedulerMod {
                 String registryKeyEvent = dataScheduler.getString( "r" + i );
 
                 try {
-                    System.out.println( "Build event ! ");
-                    DelayedEvent savedEvent = registry.get(registryKeyEvent).newInstance();
+                    DelayedEvent savedEvent = eventRegistry.get(registryKeyEvent).newInstance();
                     savedEvent.readFromNBT( dataEvent );
                     scheduleEventAt( savedEvent, tickEvent );
                 } catch (IllegalAccessException | InstantiationException e) {
@@ -130,8 +171,7 @@ public class EventSchedulerMod {
         }
     }
 
-    @Mod.EventHandler
-    public void serverUnload(FMLServerStoppingEvent event) {
+    public void unloadEvents(){
         // Get all data
         NBTTagCompound dataScheduler = new NBTTagCompound();
         dataScheduler.setLong( "t", tick );
@@ -169,7 +209,6 @@ public class EventSchedulerMod {
             e.printStackTrace();
         }
 
-        System.out.println( "save : " + dataScheduler );
         try {
             FileOutputStream os = new FileOutputStream(dataFile);
             CompressedStreamTools.writeCompressed( dataScheduler, os );
@@ -179,13 +218,40 @@ public class EventSchedulerMod {
         }
     }
 
-    @Mod.EventHandler
-    public void serverLoadFinish(FMLServerStartedEvent event) {
-        for( Long key : events.keySet() )
+    public void loadManagers(){
+        File folder = new File(DimensionManager.getCurrentSaveRootDirectory(), SAVEFOLDER);
+
+        for ( String key : managerList.keySet() )
         {
-            for( DelayedEvent ev : events.get( key ) )
-            {
-                ev.postInit();
+            File dataFile = new File( folder, key + "_data.nbt" );
+            NBTTagCompound nbtData = null;
+            try {
+                FileInputStream is = new FileInputStream( dataFile );
+                nbtData = CompressedStreamTools.readCompressed( is );
+                is.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            managerList.get( key ).readFromNBT( nbtData );
+        }
+    }
+
+    public void unloadManagers(){
+        File folder = new File( DimensionManager.getCurrentSaveRootDirectory(), SAVEFOLDER );
+
+        for ( String key : managerList.keySet() )
+        {
+            NBTTagCompound nbtData = managerList.get( key ).writeToNBT( new NBTTagCompound() );
+
+            File dataFile = new File( folder, key + "_data.nbt" );
+            FileOutputStream os;
+            try {
+                os = new FileOutputStream(dataFile);
+                CompressedStreamTools.writeCompressed( nbtData, os );
+                os.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }

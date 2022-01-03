@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "desm",
+  "version": "${version}",
+  "name": "Desm",
+  "description": "",
+  "authors": [
+    "Hagrud"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/desm/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "hagrud.desm.client.DesmClient"
+    ],
+    "main": [
+      "hagrud.desm.Desm"
+    ]
+  },
+  "mixins": [
+    "desm.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.12.12",
+    "fabric": "*",
+    "minecraft": "1.17.1"
+  }
+}
